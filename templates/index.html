@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Webtoon Translator</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}"/>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══════════════════════════════════════════════════════
+       NAV RAIL (esquerda)
+       ═══════════════════════════════════════════════════════ -->
+  <nav class="nav-rail">
+    <div class="logo">📚</div>
+
+    <button class="nav-item active" data-page="library" title="Biblioteca">
+      📖<span class="label">Biblioteca</span>
+    </button>
+
+    <button class="nav-item" data-page="reader" title="Leitor" id="navReader" disabled style="opacity:.4;cursor:not-allowed">
+      📄<span class="label">Leitor</span>
+    </button>
+
+    <div class="spacer"></div>
+
+    <button class="nav-item" data-page="settings" title="Configurações">
+      ⚙<span class="label">Configurações</span>
+    </button>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════
+       PÁGINA: BIBLIOTECA
+       ═══════════════════════════════════════════════════════ -->
+  <div class="page active" id="page-library">
+
+    <header class="page-head">
+      <h1 id="libTitle">Biblioteca</h1>
+      <span class="crumb" id="libCrumb"></span>
+      <div class="right">
+        <span class="tag">Webtoon Translator</span>
+      </div>
+    </header>
+
+    <div class="body">
+      <div id="libContent">
+        <div class="lib-empty">
+          <div class="big">📂</div>
+          <p>Carregando…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       PÁGINA: LEITOR
+       ═══════════════════════════════════════════════════════ -->
+  <div class="page" id="page-reader">
+
+    <header class="page-head">
+      <h1>Leitor</h1>
+      <span class="crumb" id="readerCrumb"></span>
+      <div class="right">
+        <button id="btnBackToLib" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#bbb;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer">← Biblioteca</button>
+      </div>
+    </header>
+
+    <div class="body">
+
+      <!-- Controles de página -->
+      <div class="read-controls">
+        <button id="btnPrev">← Anterior</button>
+        <div class="grow"></div>
+        <div class="info">
+          <b id="readPageNum">—</b> de <b id="readPageTotal">—</b> ·
+          Cap. <b id="readChapName">—</b>
+        </div>
+        <div class="grow"></div>
+        <button id="btnEdit" title="Modo edição: criar/mover/redimensionar caixas">✎ Editar</button>
+        <button id="btnTranslate" class="primary">Traduzir Página</button>
+        <button id="btnRetranslate" style="display:none">Refazer</button>
+        <button id="btnNext">Próxima →</button>
+      </div>
+
+      <!-- Toolbar de edição (oculta por padrão) -->
+      <div class="edit-toolbar" id="editToolbar">
+        <span class="hint">
+          <b>Modo edição</b> ativo —
+          <kbd>desenhe</kbd> uma área na imagem ou
+          <kbd>arraste</kbd>/<kbd>redimensione</kbd> caixas existentes.
+          Clique em uma caixa para selecionar.
+        </span>
+        <div class="grow"></div>
+        <button id="btnTranslateBox" class="primary" disabled>Traduzir Caixa</button>
+        <button id="btnDeleteBox" disabled>🗑 Excluir</button>
+        <button id="btnExitEdit">Sair</button>
+      </div>
+
+      <!-- Status do pipeline -->
+      <div class="run-status" id="runStatus">
+        <div class="spinner"></div>
+        <div class="msg" id="runMsg">Iniciando…</div>
+        <div class="pct" id="runPct"></div>
+      </div>
+
+      <!-- Reader (imagem + cards) -->
+      <div id="readerContent">
+        <div class="lib-empty">
+          <div class="big">📄</div>
+          <p>Selecione uma página da biblioteca para começar.</p>
+        </div>
+      </div>
+
+      <!-- Controles inferiores -->
+      <div class="read-controls" id="bottomControls" style="margin-top:20px;display:none">
+        <button id="btnPrev2">← Anterior</button>
+        <div class="grow"></div>
+        <div class="info">
+          <b id="readPageNum2">—</b> / <b id="readPageTotal2">—</b>
+        </div>
+        <div class="grow"></div>
+        <button id="btnNext2">Próxima →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       PÁGINA: CONFIGURAÇÕES
+       ═══════════════════════════════════════════════════════ -->
+  <div class="page" id="page-settings">
+
+    <header class="page-head">
+      <h1>Configurações</h1>
+      <span class="crumb"><b>Provedores · YOLO · Pipeline</b></span>
+    </header>
+
+    <div class="body">
+      <div class="settings-wrap">
+
+        <!-- Provedor de IA -->
+        <div class="section">
+          <h2>Provedor de IA</h2>
+
+          <div class="prov-tabs">
+            <button class="prov-tab active" data-prov="claude">Claude</button>
+            <button class="prov-tab" data-prov="openai">ChatGPT</button>
+            <button class="prov-tab local" data-prov="ollama">Ollama</button>
+            <button class="prov-tab local" data-prov="lmstudio">LM Studio</button>
+          </div>
+
+          <!-- Claude -->
+          <div class="prov-section active" id="prov-claude">
+            <div class="field">
+              <label>API Key <span class="api-key-status" id="claude-status" style="display:none">salva</span></label>
+              <input type="password" id="claude-key" placeholder="sk-ant-… (deixe vazio para manter a salva)"/>
+            </div>
+            <div class="field">
+              <label>Modelo Tradutor</label>
+              <select id="claude-model">
+                <option value="claude-opus-4-7">claude-opus-4.7 (melhor visão)</option>
+                <option value="claude-opus-4-6">claude-opus-4.6</option>
+                <option value="claude-sonnet-4-6" selected>claude-sonnet-4.6 (equilibrado)</option>
+                <option value="claude-haiku-4-5">claude-haiku-4.5 (rápido e barato)</option>
+              </select>
+              <div class="hint">Todos suportam visão. Opus 4.7 tem 3x mais resolução de imagem.</div>
+            </div>
+            <div class="field">
+              <label>Modelo Validador</label>
+              <select id="claude-validator">
+                <option value="claude-haiku-4-5" selected>claude-haiku-4.5 (recomendado)</option>
+                <option value="claude-sonnet-4-6">claude-sonnet-4.6</option>
+                <option value="claude-opus-4-6">claude-opus-4.6</option>
+              </select>
+              <div class="hint">Modelo mais leve para verificar traduções e disparar retries.</div>
+            </div>
+          </div>
+
+          <!-- OpenAI -->
+          <div class="prov-section" id="prov-openai">
+            <div class="field">
+              <label>API Key <span class="api-key-status" id="openai-status" style="display:none">salva</span></label>
+              <input type="password" id="openai-key" placeholder="sk-…"/>
+            </div>
+            <div class="field">
+              <label>Modelo Tradutor</label>
+              <select id="openai-model">
+                <option value="gpt-5.5">gpt-5.5 (flagship, mais preciso)</option>
+                <option value="gpt-5.4">gpt-5.4</option>
+                <option value="gpt-5.4-mini" selected>gpt-5.4-mini (equilibrado)</option>
+                <option value="gpt-5.4-nano">gpt-5.4-nano (mais barato)</option>
+                <option value="gpt-4.1">gpt-4.1</option>
+                <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                <option value="gpt-4o">gpt-4o</option>
+                <option value="gpt-4o-mini">gpt-4o-mini</option>
+              </select>
+              <div class="hint">Todos suportam visão. Modelos GPT-5 têm melhor compreensão de imagem.</div>
+            </div>
+            <div class="field">
+              <label>Modelo Validador</label>
+              <select id="openai-validator">
+                <option value="gpt-5.4-nano" selected>gpt-5.4-nano (recomendado)</option>
+                <option value="gpt-5.4-mini">gpt-5.4-mini</option>
+                <option value="gpt-4o-mini">gpt-4o-mini</option>
+                <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Ollama -->
+          <div class="prov-section" id="prov-ollama">
+            <div class="field">
+              <label>Base URL</label>
+              <input type="text" id="ollama-url" value="http://localhost:11434"/>
+            </div>
+            <div class="field">
+              <label>Modelo (com visão)</label>
+              <input type="text" id="ollama-model" value="llava"/>
+              <div class="hint">Ex: llava, llava:13b, bakllava — precisa estar em <code>ollama list</code></div>
+            </div>
+          </div>
+
+          <!-- LM Studio -->
+          <div class="prov-section" id="prov-lmstudio">
+            <div class="field">
+              <label>Base URL</label>
+              <input type="text" id="lmstudio-url" value="http://localhost:1234"/>
+            </div>
+            <div class="field">
+              <label>Modelo (nome no LM Studio)</label>
+              <input type="text" id="lmstudio-model" value="local-model"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pipeline -->
+        <div class="section">
+          <h2>Pipeline</h2>
+          <div class="toggle-row">
+            <div class="label-block">
+              <label for="useValidator">Agente Validador</label>
+              <div class="hint">Verifica cada tradução e refaz se inválida</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="useValidator" checked/>
+              <span class="slider-sw"></span>
+            </label>
+          </div>
+          <div class="field" style="margin-top:14px">
+            <label>Máximo de tentativas (retry)</label>
+            <input type="number" id="maxRetries" value="2" min="0" max="5"/>
+            <div class="hint">Quantas vezes refazer se o validador rejeitar</div>
+          </div>
+          <div class="field">
+            <label>Tamanho do batch (paralelismo)</label>
+            <input type="number" id="batchSize" value="1" min="1" max="10"/>
+            <div class="hint">Quantos balões traduzir em paralelo. 1 = sequencial. Valores maiores aceleram com APIs (Claude/OpenAI), mas use 1–2 com Ollama/LM Studio local.</div>
+          </div>
+        </div>
+
+        <!-- YOLO -->
+        <div class="section">
+          <h2>Detecção YOLO</h2>
+          <div class="field">
+            <label>Caminho do modelo</label>
+            <input type="text" id="yolo-path" placeholder="runs/balloon_v1/weights/best.pt"/>
+            <div class="hint">Caminho relativo ao diretório do projeto</div>
+          </div>
+          <div class="field">
+            <label>Confiança mínima (%)</label>
+            <input type="number" id="yolo-conf" value="40" min="10" max="95" step="5"/>
+          </div>
+          <div class="field">
+            <label>Limiar de contenção (%)</label>
+            <input type="number" id="yolo-cont" value="80" min="50" max="99" step="5"/>
+            <div class="hint">Remove balões aninhados (ex: balão duplo)</div>
+          </div>
+        </div>
+
+        <!-- Interface -->
+        <div class="section">
+          <h2>Interface</h2>
+          <div class="toggle-row">
+            <div class="label-block">
+              <label for="showOverlays">Caixas na imagem</label>
+              <div class="hint">Marca cada balão detectado</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="showOverlays" checked/>
+              <span class="slider-sw"></span>
+            </label>
+          </div>
+
+          <div class="field" style="margin-top:14px">
+            <label>Tamanho da fonte do balão flutuante (px)</label>
+            <input type="number" id="cardFontSize" value="13" min="10" max="22" step="1"/>
+            <div class="hint">Tamanho da tradução nos cards laterais. Padrão: 13px.</div>
+          </div>
+
+          <div class="save-bar">
+            <span class="saved" id="savedMsg" style="opacity:0">✓ Salvo</span>
+            <button id="btnSaveSettings">Salvar Configurações</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
